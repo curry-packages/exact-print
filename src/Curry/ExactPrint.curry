@@ -273,15 +273,17 @@ instance ExactPrint (Rhs a) where
     ++ if length ss == 1 then [] else ["where"]
     where SpanInfo _ ss = spi
   keywords (GuardedRhs spi _ _) =
-    (if snd (spanLength (head ss)) == 0
-       then ["="]
-       else ["->"])
-    ++ if length ss == 1 then [] else ["where"]
+    if null ss then [] else ["where"]
     where SpanInfo _ ss = spi
 
 instance ExactPrint (CondExpr a) where
   printS (CondExpr _ e1 e2) = fill $ printNode e1 >> printNode e2
-  keywords _ = ["|", "="]
+  keywords (CondExpr spi _ _) =
+    "|" :
+    (if snd (spanLength (head (tail ss))) == 0
+       then ["="]
+       else ["->"])
+    where SpanInfo _ ss = spi
 
 instance ExactPrint (Pattern a) where
   printS (LiteralPattern  spi _ l) = fill $ printStringAt sp (ppLit l)
@@ -319,7 +321,7 @@ instance ExactPrint (Pattern a) where
   keywords (TuplePattern _ ps) =
     ["("] ++ replicate (length ps - 1) "," ++ [")"]
   keywords (ListPattern _ _ ps) =
-    ["["] ++ replicate (length ps - 1) "|" ++ ["]"]
+    ["["] ++ replicate (length ps - 1) "," ++ ["]"]
   keywords (AsPattern _ _ _) = ["@"]
   keywords (LazyPattern _ _) = ["~"]
   keywords (FunctionPattern _ _ _ _) = []
