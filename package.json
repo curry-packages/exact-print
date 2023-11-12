@@ -18,7 +18,7 @@
                          "Curry.ExactPrint",
                          "Curry.ExactPrintClass" ],
     "source": {
-        "git": "https://git.ps.informatik.uni-kiel.de/curry-packages/exact-print.git",
+        "git": "https://github.com/curry-packages/exact-print.git",
         "tag": "$version"
     }
 }
