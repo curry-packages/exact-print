@@ -1,12 +1,12 @@
 module Curry.Comment where
 
-import Directory       (doesFileExist)
-import FileGoodies     (getFileInPath, lookupFileInPath)
-import FilePath        (takeFileName, (</>), (<.>))
+import System.Directory    ( doesFileExist, getFileWithSuffix )
+import System.FilePath     ( takeFileName, (</>), (<.>) )
 import System.CurryPath    ( lookupModuleSourceInLoadPath, getLoadPathForModule
                            , inCurrySubdir, stripCurrySuffix )
 import System.FrontendExec ( FrontendParams, FrontendTarget (..), defaultParams
                            , setQuiet, callFrontend, callFrontendWithParams )
+import ReadShowTerm        ( readUnqualifiedTerm )
 
 import Curry.Span 
 
@@ -30,8 +30,8 @@ readCommentsWithParseOptions progname options = do
   case mbsrc of
     Nothing -> do -- no source file, try to find Comments file in load path:
       loadpath <- getLoadPathForModule progname
-      filename <- getFileInPath (commentsFileName (takeFileName progname)) [""]
-                                loadpath
+      filename <- getFileWithSuffix (commentsFileName (takeFileName progname)) [""]
+                                    loadpath
       readCommentsFile filename
     Just (dir,_) -> do
       callFrontendWithParams COMMS options progname
@@ -45,7 +45,8 @@ commentsFileName prog = inCurrySubdir (stripCurrySuffix prog) <.> "cycom"
 readCommentsFile :: String -> IO [(Span, Comment)]
 readCommentsFile filename = do
   filecontents <- readCommentsFileRaw filename
-  return (read filecontents)
+  return (readUnqualifiedTerm ["Curry.Span", "Curry.Position", "Curry.Comment"]
+                              filecontents)
 
 -- | Reads the text from a specified file containing comments
 readCommentsFileRaw :: String -> IO String

@@ -3,7 +3,7 @@ module Curry.ExactPrintClass
  , exactPrint, printNode, empty, fill, noChilds, printStringAt, printListAt
  ) where
 
-import List
+import Data.List ( partition )
 
 import Curry.Types
 import Curry.Comment
@@ -26,8 +26,15 @@ newtype Exact = Exact {
 instance Functor EPSM where
   fmap f (EPSM (a, x)) = EPSM (f a, x)
 
+instance Applicative EPSM where
+  pure = return
+  ef <*> ex = do f <- ef
+                 x <- ex
+                 return (f x)
+
 instance Monad EPSM where
   return a = EPSM (a, emptyEPS)
+
   EPSM (a, eps1) >>= f = let EPSM (b, eps2) = f a in EPSM (b, eps1 <+> eps2)
   EPSM (_, eps1) >> EPSM (b, eps2) = EPSM (b, eps1 <+> eps2)
 
@@ -48,7 +55,7 @@ class HasSpanInfo a => ExactPrint a where
   keywords :: a -> [String]
   printS   :: a -> Exact
 
-  -- Adds keywords to the whitespace-replacement of a EPS computation
+  -- Adds keywords to the whitespace-replacement of an EPS computation
   -- and fills Whitespace up to the beginning
   printN :: a -> PutExact
   printN a = liftEPS $ withSrcInfoPoints (getSpanInfo a) (keywords a) eps
