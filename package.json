@@ -20,5 +20,9 @@
     "source": {
         "git": "https://github.com/curry-packages/exact-print.git",
         "tag": "$version"
+    },
+    "testsuite": {
+        "src-dir": "examples",
+        "modules": [ "TestExactPrint" ]
     }
 }
