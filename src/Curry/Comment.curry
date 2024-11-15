@@ -45,8 +45,18 @@ commentsFileName prog = inCurrySubdir (stripCurrySuffix prog) <.> "cycom"
 readCommentsFile :: String -> IO [(Span, Comment)]
 readCommentsFile filename = do
   filecontents <- readCommentsFileRaw filename
-  return (readUnqualifiedTerm ["Curry.Span", "Curry.Position", "Curry.Comment"]
-                              filecontents)
+  if noComments filecontents
+    then return []
+    else return (readUnqualifiedTerm ["Curry.Span", "Curry.Position", "Curry.Comment"]
+                                     filecontents)
+ where 
+  -- Checks if the `.cycom` file contains no comments (empty list). 
+  -- This is true if the file contains nothing but whitespaces, 
+  -- newlines, and brackets (string-representation of expression :: `[(Span, Comment)]`).
+  --
+  -- This check is necessary, unfortunately, because the parser fails for empty lists other 
+  -- than "[]".
+  noComments = all (`elem` "[ ]\n")
 
 -- | Reads the text from a specified file containing comments
 readCommentsFileRaw :: String -> IO String
