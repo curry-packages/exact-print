@@ -281,10 +281,10 @@ instance ExactPrint (Rhs a) where
        then ["="]
        else ["->"])
     ++ if length ss == 1 then [] else ["where"]
-    where SpanInfo _ ss = spi
+   where SpanInfo _ ss = spi
   keywords (GuardedRhs spi _ _ _) =
     if null ss then [] else ["where"]
-    where SpanInfo _ ss = spi
+   where SpanInfo _ ss = spi
 
 instance ExactPrint (CondExpr a) where
   printS (CondExpr _ e1 e2) = fill $ printNode e1 >> printNode e2
@@ -341,7 +341,7 @@ ppLit :: Literal -> String
 ppLit (Char   c) = [c]
 ppLit (Int    i) = show i
 ppLit (Float  f) = show f
-ppLit (String s) = s
+ppLit (String s) = "\"" ++ s ++ "\""
 
 instance ExactPrint (Expression a) where
   printS (Literal spi _ l) = fill $ printStringAt sp (ppLit l)
