@@ -350,7 +350,7 @@ instance ExactPrint (Pattern a) where
   keywords (InfixFuncPattern _ _ _ _ _) = []
 
 ppLit :: Literal -> String
-ppLit (Char   c) = [c]
+ppLit (Char   c) = ['\'', c, '\'']
 ppLit (Int    i) = show i
 ppLit (Float  f) = show f
 ppLit (String s) = "\"" ++ s ++ "\""
@@ -458,4 +458,6 @@ instance ExactPrint QualIdent where
   printS (QualIdent _ mid i) = fill $ do
     maybe empty printNode mid
     printNode i
-  keywords _ = []
+  keywords (QualIdent spi _ _) = 
+    if null ss then [] else ["`" , "`"]
+    where SpanInfo _ ss = spi
