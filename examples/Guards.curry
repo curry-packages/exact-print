@@ -22,4 +22,4 @@ myFun4 :: Int -> Int
 myFun4 x | y == 0    = x 
          | otherwise = 42
  where
-  y = x `mod` 2
+  y = mod x 2

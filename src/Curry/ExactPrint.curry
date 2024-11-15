@@ -281,10 +281,22 @@ instance ExactPrint (Rhs a) where
        then ["="]
        else ["->"])
     ++ if length ss == 1 then [] else ["where"]
-   where SpanInfo _ ss = spi
-  keywords (GuardedRhs spi _ _ _) =
-    if null ss then [] else ["where"]
-   where SpanInfo _ ss = spi
+    where SpanInfo _ ss = spi
+
+  -- TODO: The spanInfo of `GuardedRhs` contains the span info of first pipe (`|`) 
+  --       and additionally, if it exists, the span info of the `where` keyword. 
+  -- 
+  --       Every conditional expression of this `GuardedRhs` also contains the span info 
+  --       of the corresponding pipe (`|`), and thus should be resposible for printing
+  --       the `|`. By not supplying the `|` keyword here, we avoid duplicate `|`s, but
+  --       in order to print the `where` keyword, we also need to return an empty string
+  --       here, so that the `where` keyword is associated with the correct span info 
+  --       (the second one in the list, not the first one).
+  --
+  --       This is a workaround, and should be fixed in the future (in the front-end).
+  keywords (GuardedRhs spi _ _ _) = 
+    if length ss == 1 then [] else ["", "where"]
+    where SpanInfo _ ss = spi
 
 instance ExactPrint (CondExpr a) where
   printS (CondExpr _ e1 e2) = fill $ printNode e1 >> printNode e2
