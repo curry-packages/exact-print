@@ -1,3 +1,7 @@
+{-
+  Some examples for case expressions. 
+-}
+
 module Case where
 
 myFromJust :: Maybe a -> a

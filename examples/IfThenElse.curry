@@ -1,3 +1,6 @@
+{-
+  Different ways of using if-then-else expressions.
+-}
 module IfThenElse where
 
 myFun1 :: Int -> Int

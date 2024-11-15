@@ -8,14 +8,23 @@ import Curry.Files           ( readFullAST )
 import Control.Monad         ( (<=<) )
 import Test.Prop             ( returns, PropIO )
 
--- testExactPrinting :: PropIO
--- testExactPrinting = and <$> mapM runTest ["list.curry", "MPTC.curry"] `returns` True
-
 testExactPrintingMPTC :: PropIO
 testExactPrintingMPTC = runTest "MPTC.curry" `returns` True
 
 testExactPrintingList :: PropIO
-testExactPrintingList = runTest "list.curry" `returns` True
+testExactPrintingList = runTest "List.curry" `returns` True
+
+testExactPrintingGuards :: PropIO
+testExactPrintingGuards = runTest "Guards.curry" `returns` True
+
+testExactPrintingIfThenElse :: PropIO
+testExactPrintingIfThenElse = runTest "IfThenElse.curry" `returns` True
+
+testExactPrintingCase :: PropIO
+testExactPrintingCase = runTest "Case.curry" `returns` True
+
+testExactPrintingNoComments :: PropIO
+testExactPrintingNoComments = runTest "NoComments.curry" `returns` True
 
 -- Compares the content of a (hand-written) curry source file to the exact-printed module.
 runTest :: String -> IO Bool

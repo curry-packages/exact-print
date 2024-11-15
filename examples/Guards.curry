@@ -1,3 +1,6 @@
+{-
+  Some examples for guards.
+-}
 module Guards where
 
 import Data.Maybe ( fromJust, isJust )
@@ -14,3 +17,9 @@ myFun2 mx y
 myFun3 :: [Int] -> Int
 myFun3 xs          | null xs   = 0
                    | otherwise = head xs
+
+myFun4 :: Int -> Int
+myFun4 x | y == 0    = x 
+         | otherwise = 42
+ where
+  y = x `mod` 2
