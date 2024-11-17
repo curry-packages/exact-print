@@ -29,6 +29,9 @@ testExactPrintingNoComments = runTest "NoComments.curry" `returns` True
 testExactPrintingInfix :: PropIO
 testExactPrintingInfix = runTest "Infix.curry" `returns` True
 
+testExactPrintingListComp :: PropIO
+testExactPrintingListComp = runTest "ListComp.curry" `returns` True
+
 -- Compares the content of a (hand-written) curry source file to the exact-printed module.
 runTest :: String -> IO Bool
 runTest str = do

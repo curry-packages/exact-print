@@ -423,9 +423,9 @@ qidOp (InfixOp     _ q) = q
 qidOp (InfixConstr _ q) = q
 
 instance ExactPrint (Statement a) where
-  printS (StmtExpr _ e   )   = fill $ printNode e
+  printS (StmtExpr _ e   ) = fill $ printNode e
   printS (StmtDecl _ _ ds) = fill $ printNode ds
-  printS (StmtBind _ p e )   = fill $ printNode p >> printNode e
+  printS (StmtBind _ p e ) = fill $ printNode p >> printNode e
 
   keywords (StmtExpr _ _  ) = []
   keywords (StmtDecl _ _ _) = ["let"]
