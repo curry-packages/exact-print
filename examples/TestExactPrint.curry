@@ -38,6 +38,9 @@ testExactPrintingRecord = runTest "Record.curry" `returns` True
 testExactPrintingDo :: PropIO
 testExactPrintingDo = runTest "Do.curry" `returns` True
 
+testExactPrintingIO :: PropIO
+testExactPrintingIO = runTest "IO.curry" `returns` True
+
 -- Compares the content of a (hand-written) curry source file to the exact-printed module.
 runTest :: String -> IO Bool
 runTest str = do
