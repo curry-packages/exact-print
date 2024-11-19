@@ -386,7 +386,8 @@ instance ExactPrint (Expression a) where
   printS (Case _ _ _ e as) = fill $ printNode e >> printNode as
 
   keywords (Literal _ _ _) = []
-  keywords (Variable _ _ _) = []
+  keywords (Variable spi _ _) = if null ss then [] else ["(", ")"]
+    where SpanInfo _ ss = spi
   keywords (Constructor spi _ _) =
     ["("] ++ replicate (length ss - 2) "," ++ [")"]
     where

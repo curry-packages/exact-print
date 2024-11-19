@@ -8,38 +8,44 @@ import Curry.Files           ( readFullAST )
 import Control.Monad         ( (<=<) )
 import Test.Prop             ( returns, PropIO )
 
+check :: String -> PropIO
+check x = runTest x `returns` True
+
 testExactPrintingMPTC :: PropIO
-testExactPrintingMPTC = runTest "MPTC.curry" `returns` True
+testExactPrintingMPTC = check "MPTC.curry"
 
 testExactPrintingList :: PropIO
-testExactPrintingList = runTest "List.curry" `returns` True
+testExactPrintingList = check "List.curry"
 
 testExactPrintingGuards :: PropIO
-testExactPrintingGuards = runTest "Guards.curry" `returns` True
+testExactPrintingGuards = check "Guards.curry"
 
 testExactPrintingIfThenElse :: PropIO
-testExactPrintingIfThenElse = runTest "IfThenElse.curry" `returns` True
+testExactPrintingIfThenElse = check "IfThenElse.curry"
 
 testExactPrintingCase :: PropIO
-testExactPrintingCase = runTest "Case.curry" `returns` True
+testExactPrintingCase = check "Case.curry"
 
 testExactPrintingNoComments :: PropIO
-testExactPrintingNoComments = runTest "NoComments.curry" `returns` True
+testExactPrintingNoComments = check "NoComments.curry"
 
 testExactPrintingInfix :: PropIO
-testExactPrintingInfix = runTest "Infix.curry" `returns` True
+testExactPrintingInfix = check "Infix.curry"
 
 testExactPrintingListComp :: PropIO
-testExactPrintingListComp = runTest "ListComp.curry" `returns` True
+testExactPrintingListComp = check "ListComp.curry"
 
 testExactPrintingRecord :: PropIO
-testExactPrintingRecord = runTest "Record.curry" `returns` True
+testExactPrintingRecord = check "Record.curry"
 
 testExactPrintingDo :: PropIO
-testExactPrintingDo = runTest "Do.curry" `returns` True
+testExactPrintingDo = check "Do.curry"
 
 testExactPrintingIO :: PropIO
-testExactPrintingIO = runTest "IO.curry" `returns` True
+testExactPrintingIO = check "IO.curry"
+
+testExactPrintingFunction :: PropIO
+testExactPrintingFunction = check "Function.curry"
 
 -- Compares the content of a (hand-written) curry source file to the exact-printed module.
 runTest :: String -> IO Bool
