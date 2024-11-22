@@ -5,7 +5,7 @@ module Do where
 
 getName :: IO String
 getName = do
-  putStrLn   "Wat's your name?"
+  putStrLn   "What's your name?"
   name <- getLine
   putStrLn $ "Hey, " ++ name ++ "!"
   return name
