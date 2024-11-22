@@ -456,9 +456,27 @@ instance ExactPrint Ident where
       opChars  = "~!@#$%^&*+-=<>:?./|\\"
 
 instance ExactPrint QualIdent where
-  printS (QualIdent _ mid i) = fill $ do
-    maybe empty printNode mid
-    printNode i
-  keywords (QualIdent spi _ _) = 
-    if null ss then [] else ["`" , "`"]
-    where SpanInfo _ ss = spi
+  -- TODO: Currently, the front-end adds the complete span of the `QualIdent` to the
+  --       keyword `SpanInfo` of the `QualIdent` itself, if the `QualIdent` contains 
+  --       a module identifier (-> the identifier is qualified). 
+  --       Thus, if we want to also want to print the module identifier (e.g., `Prelude.`), 
+  --       we need to print the complete `QualIdent` (including the module identifier)
+  --       as a keyword. 
+  --
+  --       Because the only valid syntax is `A.B` where `A ::= {A .}` and `B` is an identifier, 
+  --       we can simply print the complete `QualIdent` as a keyword and the result should
+  --       still be a correct exact-printed representation of the qualified identifier. Still,
+  --       this is a workaround and should be fixed in the future.
+  printS (QualIdent _ Nothing  i) = fill $ printNode i
+  printS (QualIdent _ (Just _) _) = fill empty
+
+  keywords (QualIdent spi mi i) = case mi of
+    (Just (ModuleIdent _ mods)) 
+      -> addTicks [intercalate "." (mods ++ [iName])] 
+    Nothing 
+      -> addTicks [] 
+   where 
+    addTicks kws = 
+      if length ss <= 1 then kws else ["`"] ++ kws ++ ["`"]
+      where SpanInfo _ ss = spi
+    iName = case i of Ident _ n _ -> n

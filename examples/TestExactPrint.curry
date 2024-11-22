@@ -47,6 +47,12 @@ testExactPrintingIO = check "IO.curry"
 testExactPrintingFunction :: PropIO
 testExactPrintingFunction = check "Function.curry"
 
+testExactPrintingAsPattern :: PropIO
+testExactPrintingAsPattern = check "AsPattern.curry"
+
+testExactPrintingImports :: PropIO
+testExactPrintingImports = check "Imports.curry"
+
 -- Compares the content of a (hand-written) curry source file to the exact-printed module.
 runTest :: String -> IO Bool
 runTest str = do
