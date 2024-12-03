@@ -1,3 +1,5 @@
+{-# OPTIONS_FRONTEND -Wno-incomplete-patterns -Wno-unused-bindings #-}
+
 {-
   Some examples of as-patterns.
 -}
