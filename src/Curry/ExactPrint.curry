@@ -467,6 +467,7 @@ instance ExactPrint QualIdent where
   --       we can simply print the complete `QualIdent` as a keyword and the result should
   --       still be a correct exact-printed representation of the qualified identifier. Still,
   --       this is a workaround and should be fixed in the future.
+  
   printS (QualIdent _ Nothing  i) = fill $ printNode i
   printS (QualIdent _ (Just _) _) = fill empty
 
