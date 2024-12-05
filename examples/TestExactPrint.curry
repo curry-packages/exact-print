@@ -41,8 +41,8 @@ testExactPrintingRecord = check "Record.curry"
 testExactPrintingDo :: PropIO
 testExactPrintingDo = check "Do.curry"
 
-testExactPrintingIO :: PropIO
-testExactPrintingIO = check "IO.curry"
+testExactPrintingTupleTypes :: PropIO
+testExactPrintingTupleTypes = check "TupleTypes.curry"
 
 testExactPrintingFunction :: PropIO
 testExactPrintingFunction = check "Function.curry"
