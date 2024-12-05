@@ -231,16 +231,27 @@ instance ExactPrint QualTypeExpr where
       len = length ss - length ctx
 
 instance ExactPrint TypeExpr where
-  printS (ConstructorType _ q) = fill $ printNode q
+  -- For the unit type `()`, the span information for the qualified identifier 
+  -- is missing, but the span information for the parentheses is stored in the 
+  -- `ConstructorType`'s `SpanInfo`. In this case, we do not print the qualified identifier, 
+  -- but an empty string. Because the span information is part of the `ConstructorType`, 
+  -- we can simply exact-print the unit constructor `()` using the `keywords` function.
+  printS (ConstructorType _ q) = case q of
+    QualIdent _ _ (Ident _ "()" _) -> fill empty
+    _                              -> fill $ printNode q
   printS (ApplyType _ ty1 ty2) = fill $ printNode ty1 >> printNode ty2
-  printS (VariableType _ i) = fill $ printNode i
-  printS (TupleType _ tys) = fill $ printNode tys
-  printS (ListType _ ty) = fill $ printNode ty
+  printS (VariableType _ i)    = fill $ printNode i
+  printS (TupleType _ tys)     = fill $ printNode tys
+  printS (ListType _ ty)       = fill $ printNode ty
   printS (ArrowType _ ty1 ty2) = fill $ printNode ty1 >> printNode ty2
-  printS (ParenType _ ty) = fill $ printNode ty
-  printS (ForallType _ vs ty) = fill $ printNode vs >> printNode ty
+  printS (ParenType _ ty)      = fill $ printNode ty
+  printS (ForallType _ vs ty)  = fill $ printNode vs >> printNode ty
 
-  keywords (ConstructorType _ _) = []
+  keywords (ConstructorType sp _) 
+    | null ss   = []
+    | otherwise = ["(", ")"]
+   where
+    SpanInfo _ ss = sp 
   keywords (ApplyType _ _ _) = []
   keywords (VariableType _ _) = []
   keywords (TupleType _ tys) =
@@ -262,9 +273,9 @@ instance ExactPrint (Equation a) where
   keywords _ = []
 
 instance ExactPrint (Lhs a) where
-  printS (FunLhs _ i ps) = fill $ printNode i >> printNode ps
+  printS (FunLhs _ i ps)   = fill $ printNode i >> printNode ps
   printS (OpLhs _ p1 i p2) = fill $ printNode p1 >> printNode i >> printNode p2
-  printS (ApLhs _ l ps) = fill $ printNode l >> printNode ps
+  printS (ApLhs _ l ps)    = fill $ printNode l >> printNode ps
 
   keywords (FunLhs _ _ _) = []
   keywords (OpLhs spi _ _ _) = zipWith const ["`","`"] ss
@@ -459,7 +470,7 @@ instance ExactPrint QualIdent where
   -- TODO: Currently, the front-end adds the complete span of the `QualIdent` to the
   --       keyword `SpanInfo` of the `QualIdent` itself, if the `QualIdent` contains 
   --       a module identifier (-> the identifier is qualified). 
-  --       Thus, if we want to also want to print the module identifier (e.g., `Prelude.`), 
+  --       Thus, if we want to also print the module identifier (e.g., `Prelude.`), 
   --       we need to print the complete `QualIdent` (including the module identifier)
   --       as a keyword. 
   --
