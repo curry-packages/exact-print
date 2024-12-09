@@ -7,6 +7,13 @@ module Infix where
 myExp :: Bool
 myExp = '!' `elem` "Hello, World!"
 
+-- Fixity declaration with multiple operators
+infixl 5 ?., ??., ???. 
+(?.), (??.), (???.) :: Int -> Bool
+(?.)   = (== 0)
+(??.)  = (== 1)
+(???.) = (== 2)
+
 -- InfixR with precedence information
 infixr 4 ==>
 (==>) :: Bool -> Bool -> Bool
