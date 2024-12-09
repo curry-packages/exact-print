@@ -136,9 +136,9 @@ instance ExactPrint (Decl a) where
     printNode ctx >> printNode c >> printNode ts >> printNode ds
 
   keywords (InfixDecl _ f Nothing ids) =
-    [show f] ++            replicate (length ids - 1) ","
+    [ppInfix f] ++          replicate (length ids - 1) ","
   keywords (InfixDecl _ f (Just pr) ids) =
-    [show f, show pr] ++ replicate (length ids - 1) ","
+    [ppInfix f, show pr] ++ replicate (length ids - 1) ","
   keywords (DataDecl spi _ _ cns der) =
     ["data"] ++ (if null cns then [] else ["="]) ++
     replicate (length cns - 1) "|" ++
@@ -191,6 +191,12 @@ instance ExactPrint (Decl a) where
     cs | null ctx && not br = []
        | not br             = ["=>"]
        | otherwise          = ["("] ++ replicate (length ctx - 1) "," ++ [")", "=>"] 
+
+ppInfix :: Infix -> String
+ppInfix f = case f of
+  Infix   -> "infix"
+  InfixL  -> "infixl"
+  InfixR  -> "infixr"
 
 instance ExactPrint FunDep where
   printS (FunDep _ l r) = fill $ printNode l >> printNode r
