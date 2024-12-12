@@ -26,3 +26,10 @@ myFun3 x = case x of
              1 -> 1
              2 -> 2
              _ -> -1
+
+myFun4 :: Int -> Int
+myFun4 x = case () of _ 
+                        | x == 0 -> 0
+                        | x == 1 -> 1
+                        | x == 2 -> 2
+                        | otherwise -> -1

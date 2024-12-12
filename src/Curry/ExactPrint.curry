@@ -237,14 +237,7 @@ instance ExactPrint QualTypeExpr where
       len = length ss - length ctx
 
 instance ExactPrint TypeExpr where
-  -- For the unit type `()`, the span information for the qualified identifier 
-  -- is missing, but the span information for the parentheses is stored in the 
-  -- `ConstructorType`'s `SpanInfo`. In this case, we do not print the qualified identifier, 
-  -- but an empty string. Because the span information is part of the `ConstructorType`, 
-  -- we can simply exact-print the unit constructor `()` using the `keywords` function.
-  printS (ConstructorType _ q) = case q of
-    QualIdent _ _ (Ident _ "()" _) -> fill empty
-    _                              -> fill $ printNode q
+  printS (ConstructorType _ q) = fill $ printQualIdent q
   printS (ApplyType _ ty1 ty2) = fill $ printNode ty1 >> printNode ty2
   printS (VariableType _ i)    = fill $ printNode i
   printS (TupleType _ tys)     = fill $ printNode tys
@@ -330,7 +323,7 @@ instance ExactPrint (Pattern a) where
   printS (NegativePattern spi _ l) = fill $ printStringAt sp ('-' : ppLit l)
     where SpanInfo sp _ = spi
   printS (VariablePattern _ _ v) = fill $ printNode v
-  printS (ConstructorPattern _ _ q ps) = fill $ printNode q >> printNode ps
+  printS (ConstructorPattern _ _ q ps) = fill $ printQualIdent q >> printNode ps
   printS (InfixPattern _ _ p1 q p2) =
     fill $ printNode p1 >> printNode q >> printNode p2
   printS (ParenPattern _ p) = fill $ printNode p
@@ -376,7 +369,7 @@ instance ExactPrint (Expression a) where
   printS (Literal spi _ l) = fill $ printStringAt sp (ppLit l)
     where SpanInfo sp _ = spi
   printS (Variable _ _ qid) = fill $ printNode qid
-  printS (Constructor _ _ qid) = fill $ printNode qid
+  printS (Constructor _ _ qid) = fill $ printQualIdent qid
   printS (Paren _ e) = fill $ printNode e
   printS (Typed _ e ty) = fill $ printNode e >> printNode ty
   printS (Record _ _ q fs) = fill $ printNode q >> printNode fs
@@ -432,7 +425,9 @@ instance ExactPrint (Expression a) where
   keywords (RightSection _ _ _) = ["(", ")"]
   keywords (Lambda _ _ _) = ["\\", "->"]
   keywords (Let _ _ _ _) = ["let", "in"]
-  keywords (Do _ _ _ _) = ["do"]
+  keywords (Do _ layout stms _) = case layout of
+    WhitespaceLayout -> ["do"]
+    ExplicitLayout _ -> ["do", "{"] ++ replicate (length stms - 1) "," ++ ["}"]
   keywords (IfThenElse _ _ _ _) = ["if", "then", "else"]
   keywords (Case _ _ _ _ _) = ["case" , "of"]
 
@@ -480,7 +475,7 @@ instance ExactPrint QualIdent where
   --       we need to print the complete `QualIdent` (including the module identifier)
   --       as a keyword. 
   --
-  --       Because the only valid syntax is `A.B` where `A ::= {A .}` and `B` is an identifier, 
+  --       Because the only valid syntax is `A.B` where `A ::= {A.}` and `B` is an identifier, 
   --       we can simply print the complete `QualIdent` as a keyword and the result should
   --       still be a correct exact-printed representation of the qualified identifier. Still,
   --       this is a workaround and should be fixed in the future.
@@ -498,3 +493,14 @@ instance ExactPrint QualIdent where
       if length ss <= 1 then kws else ["`"] ++ kws ++ ["`"]
       where SpanInfo _ ss = spi
     iName = case i of Ident _ n _ -> n
+
+--- For the unit type `()`, the span information for the qualified identifier 
+--- is missing, but the span information for the parentheses is stored in the 
+--- outer `SpanInfo` (e.g., of a surrounding `ConstructorType`). 
+--- In this case, we must not print the qualified identifier, but an empty string. 
+--- Because the span information is part of the surrounding structure, 
+--- the unit constructor `()` must be printed using the `keywords` function, instead.
+printQualIdent :: QualIdent -> PutExact
+printQualIdent qid = case qid of 
+  QualIdent _ _ (Ident _ "()" _) -> empty
+  _                              -> printNode qid

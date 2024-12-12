@@ -11,3 +11,6 @@ myFun1 xs@(_:xs') = xs ++ myFun1 xs'
 
 myFun2 :: Int -> Bool
 myFun2 x@0 = True
+
+myLocalAsPat :: Int -> Bool
+myLocalAsPat x = let y@(Just val) = Just x in True
