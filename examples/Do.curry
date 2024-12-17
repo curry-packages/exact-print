@@ -15,3 +15,24 @@ expr1 = do
   x <- Just 3
   y <- Just 4
   return (x + y)
+
+expr2 :: Maybe Int
+expr2 = do { x <- Just 3; y <- Just 4; return (x + y) }
+
+expr3 :: IO ()
+expr3 = do { return () }
+
+expr4 :: IO ()
+expr4 = do {
+  putStr   "Hello, ";
+  putStrLn "World!";
+  return ()
+}
+
+expr5 :: IO ()
+expr5 = do 
+      {
+        putStr   "Hello, ";
+        putStrLn "World!";
+        return ()
+      }

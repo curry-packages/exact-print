@@ -13,7 +13,7 @@ import Curry.ExactPrintClass
 
 import Prelude hiding ( empty )
 
-import Debug.Trace ( trace )
+import Debug.Trace ( trace, traceShowId )
 
 instance ExactPrint (Module a) where
   printS (Module spi _ ps mid mex im ds) = fill $
@@ -427,9 +427,13 @@ instance ExactPrint (Expression a) where
   keywords (Let _ _ _ _) = ["let", "in"]
   keywords (Do _ layout stms _) = case layout of
     WhitespaceLayout -> ["do"]
-    ExplicitLayout _ -> ["do", "{"] ++ replicate (length stms - 1) "," ++ ["}"]
+    ExplicitLayout _ -> ["do", "{"] ++ replicate (length stms) ";" ++ ["}"]
   keywords (IfThenElse _ _ _ _) = ["if", "then", "else"]
   keywords (Case _ _ _ _ _) = ["case" , "of"]
+
+  extraSpans exp = case exp of
+    (Do _ (ExplicitLayout sps) _ _) -> sps
+    _                               -> []
 
 qidOp :: InfixOp a -> QualIdent
 qidOp (InfixOp     _ q) = q

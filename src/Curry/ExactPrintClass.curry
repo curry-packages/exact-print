@@ -1,9 +1,9 @@
 module Curry.ExactPrintClass
- ( ExactPrint(keywords, printS, printN), PrintAt(..), PutExact, Exact
+ ( ExactPrint(..), PrintAt(..), PutExact, Exact
  , exactPrint, printNode, empty, fill, noChilds, printStringAt, printListAt
  ) where
 
-import Data.List ( partition )
+import Data.List ( partition, last, sortBy)
 
 import Curry.Types
 import Curry.Comment
@@ -55,15 +55,33 @@ class HasSpanInfo a => ExactPrint a where
   keywords :: a -> [String]
   printS   :: a -> Exact
 
+  -- In some cases, the exact-printer has to account for additional spans 
+  -- in order to exact-print the entity correctly. Usually, this is the case
+  -- for entities that have an explicit layout with additional spans that 
+  -- are not covered by the entity's `SpanInfo` directly.
+  extraSpans :: a -> [Span]
+  extraSpans _ = []
+
   -- Adds keywords to the whitespace-replacement of an EPS computation
   -- and fills Whitespace up to the beginning
   printN :: a -> PutExact
-  printN a = liftEPS $ withSrcInfoPoints (getSpanInfo a) (keywords a) eps
+  printN a = liftEPS $ withSrcInfoPoints spanInfo (keywords a) eps
     where
       EPSM (_, eps) = do
-        liftEPS $ fillUpS (getStartPosition a) -- fill space before entity
-        unExact $ printS  a                    -- collect keywords to print
-        liftEPS $ fillUpS (getEndPosition   a) -- print them, add trailing space
+        liftEPS $ fillUpS (getStartPosition a)      -- fill space before entity
+        unExact $ printS  a                         -- collect keywords to print
+        liftEPS $ fillUpS (getEndPosition spanInfo) -- print them, add trailing space
+      
+      spanInfo = case extraSpans a of
+        []  -> getSpanInfo a
+        sps -> mergeSpanInfo (getSpanInfo a) sps
+      where 
+        mergeSpanInfo spi sps2 = case spi of 
+          (SpanInfo sp sps1) -> 
+            let sps' = sortBy (\(Span p1 _) (Span p2 _) -> p1 < p2) (sps1 ++ sps2) 
+                endPos = end (last sps')
+            in setEndPosition endPos $ SpanInfo sp sps'
+          _ -> error "mergeSpanInfo: No Span Info!"
 
 instance ExactPrint a => ExactPrint [a] where
   printS      = Exact . sequenceExact
@@ -132,8 +150,7 @@ sequenceExact = sequence_ . map printNode
 -- Use the rest when exiting this scope
 withSrcInfoPoints :: SpanInfo -> [String] -> EPS -> EPS
 withSrcInfoPoints NoSpanInfo        _        _   _  _ = error "NoSpanInfo"
-withSrcInfoPoints (SpanInfo sp sps) keyws eps cs p =
-  replaceComments $ eps (merge (zip sps keyws) bef) p
+withSrcInfoPoints (SpanInfo sp sps) keyws eps cs p = replaceComments $ eps (merge (zip sps keyws) bef) p
   where (aft, bef) = partition ((`isAfter` sp) . fst) cs
         replaceComments (s, _, p') = (s, aft, p')
 
