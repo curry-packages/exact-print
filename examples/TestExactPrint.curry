@@ -59,6 +59,9 @@ testExactPrintingExports = check "Exports.curry"
 testExactPrintingNonDet :: PropIO
 testExactPrintingNonDet = check "NonDet.curry"
 
+testExactPrintingDeriving :: PropIO
+testExactPrintingDeriving = check "Deriving.curry"
+
 -- Compares the content of a (hand-written) curry source file to the exact-printed module.
 runTest :: String -> IO Bool
 runTest str = do
