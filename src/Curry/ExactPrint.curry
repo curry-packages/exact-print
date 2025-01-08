@@ -424,7 +424,9 @@ instance ExactPrint (Expression a) where
   keywords (LeftSection _ _ _) = ["(", ")"]
   keywords (RightSection _ _ _) = ["(", ")"]
   keywords (Lambda _ _ _) = ["\\", "->"]
-  keywords (Let _ _ _ _) = ["let", "in"]
+  keywords (Let _ layout ds _) = case layout of 
+    WhitespaceLayout -> ["let", "in"]
+    ExplicitLayout _ -> ["let", "{"] ++ replicate (length ds - 1) ";" ++ ["}", "in"]
   keywords (Do _ layout stms _) = case layout of
     WhitespaceLayout -> ["do"]
     ExplicitLayout _ -> ["do", "{"] ++ replicate (length stms) ";" ++ ["}"]
@@ -436,6 +438,7 @@ instance ExactPrint (Expression a) where
   extraSpans exp = case exp of
     (Do   _ (ExplicitLayout sps) _ _)   -> sps
     (Case _ (ExplicitLayout sps) _ _ _) -> sps
+    (Let  _ (ExplicitLayout sps) _ _)   -> sps
     _                                   -> []
 
 qidOp :: InfixOp a -> QualIdent
