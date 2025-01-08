@@ -33,3 +33,6 @@ myFun4 x = case () of _
                         | x == 1 -> 1
                         | x == 2 -> 2
                         | otherwise -> -1
+
+myFun5 :: Int -> Int
+myFun5 x = case x of { 0 -> 0; 1 -> 1; 2 -> 2; _ -> -1 }

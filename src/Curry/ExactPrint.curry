@@ -429,11 +429,14 @@ instance ExactPrint (Expression a) where
     WhitespaceLayout -> ["do"]
     ExplicitLayout _ -> ["do", "{"] ++ replicate (length stms) ";" ++ ["}"]
   keywords (IfThenElse _ _ _ _) = ["if", "then", "else"]
-  keywords (Case _ _ _ _ _) = ["case" , "of"]
+  keywords (Case _ layout _ _ alts) = case layout of
+    WhitespaceLayout -> ["case", "of"]
+    ExplicitLayout _ -> ["case", "of", "{"] ++ replicate (length alts - 1) ";" ++ ["}"]
 
   extraSpans exp = case exp of
-    (Do _ (ExplicitLayout sps) _ _) -> sps
-    _                               -> []
+    (Do   _ (ExplicitLayout sps) _ _)   -> sps
+    (Case _ (ExplicitLayout sps) _ _ _) -> sps
+    _                                   -> []
 
 qidOp :: InfixOp a -> QualIdent
 qidOp (InfixOp     _ q) = q
