@@ -28,3 +28,6 @@ fun5 x = case () of _
                       | x == 0    ->  0 
                       | x == 1    ->  1 
                       | otherwise -> -1
+
+fun6 :: ( (Int, Int) ) -> Int
+fun6 (x, _) = x
