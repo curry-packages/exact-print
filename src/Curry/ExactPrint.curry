@@ -1,7 +1,7 @@
 module Curry.ExactPrint where
 
-import List
-import Maybe
+import Data.List
+import Data.Maybe
 
 import Curry.Ident
 import Curry.Types
@@ -11,8 +11,12 @@ import Curry.Span
 import Curry.SpanInfo
 import Curry.ExactPrintClass
 
+import Prelude hiding ( empty )
+
+import Debug.Trace ( trace, traceShowId )
+
 instance ExactPrint (Module a) where
-  printS (Module spi ps mid mex im ds) = fill $
+  printS (Module spi _ ps mid mex im ds) = fill $
     if null ss
       then do
         printNode ps
@@ -28,7 +32,7 @@ instance ExactPrint (Module a) where
       printHeader = case mex of
         Nothing -> printNode mid
         Just ex -> printNode mid >> printNode ex
-  keywords (Module spi _ _ _ _ _) =
+  keywords (Module spi _ _ _ _ _ _) =
     if null ss then [] else ["module", "where"]
     where
       SpanInfo _ ss = spi
@@ -91,20 +95,22 @@ instance ExactPrint ModulePragma where
 
 ppTool :: Maybe Tool -> String -> String
 ppTool Nothing  opts = opts
-ppTool (Just t) opts = case t of
+ppTool (Just (KnownTool t)) opts = case t of
   KICS2         -> "_KICS2 "       ++ opts
   PAKCS         -> "_PAKCS "       ++ opts
   CYMAKE        -> "_CYMAKE "      ++ opts
   FRONTEND      -> "_FRONTEND "    ++ opts
-  UnknownTool s -> "_" ++ s ++ " " ++ opts
+ppTool (Just (UnknownTool s)) opts = "_" ++ s ++ " " ++ opts
 
 instance PrintAt Extension where
   printString (KnownExtension   _ e) = show e
   printString (UnknownExtension _ e) = e
-  printSpan (KnownExtension p e) =
-    Span p (incr p (length (show e)))
-  printSpan (UnknownExtension p e) =
-    Span p (incr p (length e))
+  printSpan (KnownExtension p' e) = case p' of 
+    SpanInfo (Span p _) _ -> Span p (incr p (length (show e)))
+    _ -> error "printSpan Extension: NoSpan"
+  printSpan (UnknownExtension p' e) = case p' of
+    SpanInfo (Span p _) _ -> Span p (incr p (length e))
+    _ -> error "printSpan Extension: NoSpan"
 
 instance ExactPrint (Decl a) where
   printS (InfixDecl _ _ _ ids) = fill $ printNode ids
@@ -124,15 +130,15 @@ instance ExactPrint (Decl a) where
   printS (FreeDecl _ vs) = fill $ printNode $ map unVar vs
     where unVar (Var _ i) = i
   printS (DefaultDecl _ tys) = fill $ printNode tys
-  printS (ClassDecl _ ctx c v ds) = fill $
-    printNode ctx >> printNode c >> printNode v >> printNode ds
-  printS (InstanceDecl _ ctx c ty ds) = fill $
-    printNode ctx >> printNode c >> printNode ty >> printNode ds
+  printS (ClassDecl _ _ ctx c v fdeps ds) = fill $
+    printNode ctx >> printNode c >> printNode v >> printNode fdeps >> printNode ds
+  printS (InstanceDecl _ _ ctx c ts ds) = fill $
+    printNode ctx >> printNode c >> printNode ts >> printNode ds
 
   keywords (InfixDecl _ f Nothing ids) =
-    [show f] ++            replicate (length ids - 1) ","
+    [ppInfix f] ++          replicate (length ids - 1) ","
   keywords (InfixDecl _ f (Just pr) ids) =
-    [show f, show pr] ++ replicate (length ids - 1) ","
+    [ppInfix f, show pr] ++ replicate (length ids - 1) ","
   keywords (DataDecl spi _ _ cns der) =
     ["data"] ++ (if null cns then [] else ["="]) ++
     replicate (length cns - 1) "|" ++
@@ -165,26 +171,36 @@ instance ExactPrint (Decl a) where
     replicate (length vs - 1) "," ++ ["free"]
   keywords (DefaultDecl _ vs) =
     ["default", "("] ++ replicate (length vs - 1) "," ++ [")"]
-  keywords (ClassDecl spi ctx _ _ _) =
-    ["class"] ++
-    case br of
-      0 -> ["where"]
-      1 -> ["=>", "where"]
-      _ -> ["("] ++ replicate (length ctx - 1) "," ++
-           [")", "=>", "where"]
-    where
-      SpanInfo _ ss = spi
-      br = length ss - 2 - length ctx
-  keywords (InstanceDecl spi ctx _ _ _) =
-    ["instance"] ++
-    case br of
-      0 -> ["where"]
-      1 -> ["=>", "where"]
-      _ -> ["("] ++ replicate (length ctx - 1) "," ++
-           [")", "=>", "where"]
-    where
-      SpanInfo _ ss = spi
-      br = length ss - 2 - length ctx
+  keywords (ClassDecl spi _ ctx _ _ fd _) = 
+    ["class"] ++ cs ++ fds ++ ["where"]
+   where 
+    SpanInfo _ ss = spi
+    
+    br = length ss - 2 - length fd > 1
+    cs | null ctx && not br = []
+       | not br             = ["=>"]
+       | otherwise          = ["("] ++ replicate (length ctx - 1) "," ++ [")", "=>"]
+    fds | null fd   = []
+        | otherwise = ["|"] ++ replicate (length fd - 1) ","
+  keywords (InstanceDecl spi _ ctx _ _ _) = 
+    ["instance"] ++ cs ++ ["where"]
+   where
+    SpanInfo _ ss = spi
+
+    br = length ss - 2 > 1
+    cs | null ctx && not br = []
+       | not br             = ["=>"]
+       | otherwise          = ["("] ++ replicate (length ctx - 1) "," ++ [")", "=>"] 
+
+ppInfix :: Infix -> String
+ppInfix f = case f of
+  Infix   -> "infix"
+  InfixL  -> "infixl"
+  InfixR  -> "infixr"
+
+instance ExactPrint FunDep where
+  printS (FunDep _ l r) = fill $ printNode l >> printNode r
+  keywords _ = ["->"]
 
 instance ExactPrint ConstrDecl where
   printS (ConstrDecl _ i tys) = fill $ printNode i >> printNode tys
@@ -221,16 +237,20 @@ instance ExactPrint QualTypeExpr where
       len = length ss - length ctx
 
 instance ExactPrint TypeExpr where
-  printS (ConstructorType _ q) = fill $ printNode q
+  printS (ConstructorType _ q) = fill $ printQualIdent q
   printS (ApplyType _ ty1 ty2) = fill $ printNode ty1 >> printNode ty2
-  printS (VariableType _ i) = fill $ printNode i
-  printS (TupleType _ tys) = fill $ printNode tys
-  printS (ListType _ ty) = fill $ printNode ty
+  printS (VariableType _ i)    = fill $ printNode i
+  printS (TupleType _ tys)     = fill $ printNode tys
+  printS (ListType _ ty)       = fill $ printNode ty
   printS (ArrowType _ ty1 ty2) = fill $ printNode ty1 >> printNode ty2
-  printS (ParenType _ ty) = fill $ printNode ty
-  printS (ForallType _ vs ty) = fill $ printNode vs >> printNode ty
+  printS (ParenType _ ty)      = fill $ printNode ty
+  printS (ForallType _ vs ty)  = fill $ printNode vs >> printNode ty
 
-  keywords (ConstructorType _ _) = []
+  keywords (ConstructorType sp _) 
+    | null ss   = []
+    | otherwise = ["(", ")"]
+   where
+    SpanInfo _ ss = sp 
   keywords (ApplyType _ _ _) = []
   keywords (VariableType _ _) = []
   keywords (TupleType _ tys) =
@@ -248,13 +268,13 @@ instance ExactPrint Constraint where
       SpanInfo _ ss = spi
 
 instance ExactPrint (Equation a) where
-  printS (Equation _ l r) = fill $ printNode l >> printNode r
+  printS (Equation _ _ l r) = fill $ printNode l >> printNode r
   keywords _ = []
 
 instance ExactPrint (Lhs a) where
-  printS (FunLhs _ i ps) = fill $ printNode i >> printNode ps
+  printS (FunLhs _ i ps)   = fill $ printNode i >> printNode ps
   printS (OpLhs _ p1 i p2) = fill $ printNode p1 >> printNode i >> printNode p2
-  printS (ApLhs _ l ps) = fill $ printNode l >> printNode ps
+  printS (ApLhs _ l ps)    = fill $ printNode l >> printNode ps
 
   keywords (FunLhs _ _ _) = []
   keywords (OpLhs spi _ _ _) = zipWith const ["`","`"] ss
@@ -263,17 +283,29 @@ instance ExactPrint (Lhs a) where
   keywords (ApLhs _ _ _)  = ["(",")"]
 
 instance ExactPrint (Rhs a) where
-  printS (SimpleRhs  _ e  ds) = fill $ printNode e  >> printNode ds
-  printS (GuardedRhs _ cs ds) = fill $ printNode cs >> printNode ds
+  printS (SimpleRhs  _ _ e  ds) = fill $ printNode e  >> printNode ds
+  printS (GuardedRhs _ _ cs ds) = fill $ printNode cs >> printNode ds
 
-  keywords (SimpleRhs  spi _ _) =
+  keywords (SimpleRhs  spi _ _ _) =
     (if snd (spanLength (head ss)) == 0
        then ["="]
        else ["->"])
     ++ if length ss == 1 then [] else ["where"]
     where SpanInfo _ ss = spi
-  keywords (GuardedRhs spi _ _) =
-    if null ss then [] else ["where"]
+
+  -- TODO: The spanInfo of `GuardedRhs` contains the span info of first pipe (`|`) 
+  --       and additionally, if it exists, the span info of the `where` keyword. 
+  -- 
+  --       Every conditional expression of this `GuardedRhs` also contains the span info 
+  --       of the corresponding pipe (`|`), and thus should be resposible for printing
+  --       the `|`. By not supplying the `|` keyword here, we avoid duplicate `|`s, but
+  --       in order to print the `where` keyword, we also need to return an empty string
+  --       here, so that the `where` keyword is associated with the correct span info 
+  --       (the second one in the list, not the first one).
+  --
+  --       This is a workaround, and should be fixed in the future (in the front-end).
+  keywords (GuardedRhs spi _ _ _) = 
+    if length ss == 1 then [] else ["", "where"]
     where SpanInfo _ ss = spi
 
 instance ExactPrint (CondExpr a) where
@@ -291,7 +323,7 @@ instance ExactPrint (Pattern a) where
   printS (NegativePattern spi _ l) = fill $ printStringAt sp ('-' : ppLit l)
     where SpanInfo sp _ = spi
   printS (VariablePattern _ _ v) = fill $ printNode v
-  printS (ConstructorPattern _ _ q ps) = fill $ printNode q >> printNode ps
+  printS (ConstructorPattern _ _ q ps) = fill $ printQualIdent q >> printNode ps
   printS (InfixPattern _ _ p1 q p2) =
     fill $ printNode p1 >> printNode q >> printNode p2
   printS (ParenPattern _ p) = fill $ printNode p
@@ -328,16 +360,16 @@ instance ExactPrint (Pattern a) where
   keywords (InfixFuncPattern _ _ _ _ _) = []
 
 ppLit :: Literal -> String
-ppLit (Char   c) = [c]
+ppLit (Char   c) = ['\'', c, '\'']
 ppLit (Int    i) = show i
 ppLit (Float  f) = show f
-ppLit (String s) = s
+ppLit (String s) = "\"" ++ s ++ "\""
 
 instance ExactPrint (Expression a) where
   printS (Literal spi _ l) = fill $ printStringAt sp (ppLit l)
     where SpanInfo sp _ = spi
   printS (Variable _ _ qid) = fill $ printNode qid
-  printS (Constructor _ _ qid) = fill $ printNode qid
+  printS (Constructor _ _ qid) = fill $ printQualIdent qid
   printS (Paren _ e) = fill $ printNode e
   printS (Typed _ e ty) = fill $ printNode e >> printNode ty
   printS (Record _ _ q fs) = fill $ printNode q >> printNode fs
@@ -357,14 +389,15 @@ instance ExactPrint (Expression a) where
   printS (LeftSection _ e op) = fill $ printNode e >> printNode (qidOp op)
   printS (RightSection _ op e) = fill $ printNode (qidOp op) >> printNode e
   printS (Lambda _ ps e) = fill $ printNode ps >> printNode e
-  printS (Let _ ds e) = fill $ printNode ds >> printNode e
-  printS (Do _ stms e) = fill $ printNode stms >> printNode e
+  printS (Let _ _ ds e) = fill $ printNode ds >> printNode e
+  printS (Do _ _ stms e) = fill $ printNode stms >> printNode e
   printS (IfThenElse _ e1 e2 e3) =
     fill $ printNode e1 >> printNode e2 >> printNode e3
-  printS (Case _ _ e as) = fill $ printNode e >> printNode as
+  printS (Case _ _ _ e as) = fill $ printNode e >> printNode as
 
   keywords (Literal _ _ _) = []
-  keywords (Variable _ _ _) = []
+  keywords (Variable spi _ _) = if null ss then [] else ["(", ")"]
+    where SpanInfo _ ss = spi
   keywords (Constructor spi _ _) =
     ["("] ++ replicate (length ss - 2) "," ++ [")"]
     where
@@ -391,22 +424,34 @@ instance ExactPrint (Expression a) where
   keywords (LeftSection _ _ _) = ["(", ")"]
   keywords (RightSection _ _ _) = ["(", ")"]
   keywords (Lambda _ _ _) = ["\\", "->"]
-  keywords (Let _ _ _) = ["let", "in"]
-  keywords (Do _ _ _) = ["do"]
+  keywords (Let _ layout ds _) = case layout of 
+    WhitespaceLayout -> ["let", "in"]
+    ExplicitLayout _ -> ["let", "{"] ++ replicate (length ds - 1) ";" ++ ["}", "in"]
+  keywords (Do _ layout stms _) = case layout of
+    WhitespaceLayout -> ["do"]
+    ExplicitLayout _ -> ["do", "{"] ++ replicate (length stms) ";" ++ ["}"]
   keywords (IfThenElse _ _ _ _) = ["if", "then", "else"]
-  keywords (Case _ _ _ _) = ["case" , "of"]
+  keywords (Case _ layout _ _ alts) = case layout of
+    WhitespaceLayout -> ["case", "of"]
+    ExplicitLayout _ -> ["case", "of", "{"] ++ replicate (length alts - 1) ";" ++ ["}"]
+
+  extraSpans exp = case exp of
+    (Do   _ (ExplicitLayout sps) _ _)   -> sps
+    (Case _ (ExplicitLayout sps) _ _ _) -> sps
+    (Let  _ (ExplicitLayout sps) _ _)   -> sps
+    _                                   -> []
 
 qidOp :: InfixOp a -> QualIdent
 qidOp (InfixOp     _ q) = q
 qidOp (InfixConstr _ q) = q
 
 instance ExactPrint (Statement a) where
-  printS (StmtExpr _   e) = fill $ printNode e
-  printS (StmtDecl _ ds ) = fill $ printNode ds
-  printS (StmtBind _ p e) = fill $ printNode p >> printNode e
+  printS (StmtExpr _ e   ) = fill $ printNode e
+  printS (StmtDecl _ _ ds) = fill $ printNode ds
+  printS (StmtBind _ p e ) = fill $ printNode p >> printNode e
 
   keywords (StmtExpr _ _  ) = []
-  keywords (StmtDecl _ _  ) = ["let"]
+  keywords (StmtDecl _ _ _) = ["let"]
   keywords (StmtBind _ _ _) = ["<-"]
 
 instance ExactPrint (Alt a) where
@@ -433,7 +478,39 @@ instance ExactPrint Ident where
       opChars  = "~!@#$%^&*+-=<>:?./|\\"
 
 instance ExactPrint QualIdent where
-  printS (QualIdent _ mid i) = fill $ do
-    maybe empty printNode mid
-    printNode i
-  keywords _ = []
+  -- TODO: Currently, the front-end adds the complete span of the `QualIdent` to the
+  --       keyword `SpanInfo` of the `QualIdent` itself, if the `QualIdent` contains 
+  --       a module identifier (-> the identifier is qualified). 
+  --       Thus, if we want to also print the module identifier (e.g., `Prelude.`), 
+  --       we need to print the complete `QualIdent` (including the module identifier)
+  --       as a keyword. 
+  --
+  --       Because the only valid syntax is `A.B` where `A ::= {A.}` and `B` is an identifier, 
+  --       we can simply print the complete `QualIdent` as a keyword and the result should
+  --       still be a correct exact-printed representation of the qualified identifier. Still,
+  --       this is a workaround and should be fixed in the future.
+  
+  printS (QualIdent _ Nothing  i) = fill $ printNode i
+  printS (QualIdent _ (Just _) _) = fill empty
+
+  keywords (QualIdent spi mi i) = case mi of
+    (Just (ModuleIdent _ mods)) 
+      -> addTicks [intercalate "." (mods ++ [iName])] 
+    Nothing 
+      -> addTicks [] 
+   where 
+    addTicks kws = 
+      if length ss <= 1 then kws else ["`"] ++ kws ++ ["`"]
+      where SpanInfo _ ss = spi
+    iName = case i of Ident _ n _ -> n
+
+--- For the unit type `()`, the span information for the qualified identifier 
+--- is missing, but the span information for the parentheses is stored in the 
+--- outer `SpanInfo` (e.g., of a surrounding `ConstructorType`). 
+--- In this case, we must not print the qualified identifier, but an empty string. 
+--- Because the span information is part of the surrounding structure, 
+--- the unit constructor `()` must be printed using the `keywords` function, instead.
+printQualIdent :: QualIdent -> PutExact
+printQualIdent qid = case qid of 
+  QualIdent _ _ (Ident _ "()" _) -> empty
+  _                              -> printNode qid
